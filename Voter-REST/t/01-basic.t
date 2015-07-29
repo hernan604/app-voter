@@ -52,8 +52,8 @@ $t->post_ok(
     }
 )->status_is(200);
 $t->get_ok('/contests' => {Accept => 'application/json',})->status_is(200)
-    ->json_is(['outro-contest', 'primeiro-contest'])
-    ->json_is('/0', 'outro-contest')->json_is('/1', 'primeiro-contest');
+    ->json_is(['primeiro-contest','outro-contest'])
+    ->json_is('/1', 'outro-contest')->json_is('/0', 'primeiro-contest');
 
 $t->post_ok('/contests/primeiro-contest/token/create' =>
         {Accept => 'application/json',})->status_is(200);

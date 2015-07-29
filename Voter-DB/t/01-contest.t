@@ -46,7 +46,7 @@ my $contest2 = {
 ok( $v->contest->add($contest2),'addd' );
 my $contest_clone2 = {map{$_=>$contest->{$_}}keys%{$contest}};
 ok( $v->contest->add($contest_clone2),'addd' );
-is_deeply( $v->contest->list, ['segundo-contest','primeiro-contest'], 'Contest list' );
+is_deeply( $v->contest->list, ['primeiro-contest','segundo-contest'], 'Contest list' );
 
 ok( $v->contest->del( 'primeiro-contest' ) );
 ok( $v->contest->del( 'segundo-contest' ) );
