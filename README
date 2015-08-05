@@ -1,0 +1,170 @@
+
+                                                          ____
+                    ___        _______      ____         /   /                 
+ 1 0 1 1 0 1 1 1 0 /  /___ ____\_     \__  /   /__      / 604 0 1 0 1 1 0 1 1 1
+ 1 1 1 0 1 0 0 1 1/      /   ___/ /   /  \/   /   \__  /   /1 1 1 1 1 0 1 0 0 1
+ 0 1 0 1 1 0 0 0 /__/   /    __/    _/       / /  /  \/   / 0 1 0 1 0 1 1 0 0 0
+ 1 0 1 0 1 1 1 0 1 /    \      \__\  \___\  /_   /__\____/0 1 0 1 0 1 0 1 1 1 0
+ 0 1 0 1 0 0 1 1 0/     /\      \  \  \   \_github.com/hernan604  1 0 1 0 0 1 1
+                 /_____/  \______\  \__\     /__/       
+
+
+                                  PRESENTS
+
+ ......Name: app-voter
+ .......Url: https://github.com/SelecaoGlobocom/HernanLopes
+
+
+                                DESCRIPTION
+ 
+ app-voter globo.com challenge
+
+ PRE-REQ
+
+ Maquina ubuntu desktop 64, ultima versão.
+ Usei 4 processadores no arquivos packer/arch/64/build/web/arch-template.json 
+ altere conforme necessário
+
+ INSTRUCOES
+ 
+    candidate=HernanLopes
+    git clone git@github.com:SelecaoGlobocom/${candidate}.git
+    cd ${candidate}/scripts
+
+ 1. instalar dependencias
+
+ ./prereq_scripts.sh #vai instalar tudo que seu ubuntu precisa
+
+ 2. criar a maquina (vm do virtualbox neste caso) com packer
+
+    cd ${candidate}/scripts
+    cd packer/arch/64/build/web/
+    ./build.sh
+
+ 3. subir as máquinas 
+
+ por conta da falta de tempo, todas as maquinas sobem 1nginx, 1 redis e 1app-voter
+
+ mas minha idéia era separar por perfil de máquinas. ex: 
+
+    packer/arch/64/build/app-voter/
+    packer/arch/64/build/nginx/
+    packer/arch/64/build/redis/
+
+ no entanto uma configuração importante que coloquei são s ips da máquina do 
+ nginx. ela precisa ficar no ip 192.168.5.114 e as outras nos seguintes ips
+
+    nginx+redis         192.168.5.114   (instancia com niginx+redis)
+    web1                192.168.5.120   (app-voter)
+    web2                192.168.5.121   (app-voter)
+    web3                192.168.5.122   (app-voter)
+    web4                192.168.5.123   (app-voter)
+    web5                192.168.5.124   (app-voter)
+    web6                192.168.5.125   (app-voter)
+    web7                192.168.5.126   (app-voter)
+    web8                192.168.5.127   (app-voter)
+
+ então a idéia é que você execute um comando para subir uma máquina com perfil 
+ nginx+redis no ip 192.168.5.114. E, várias máquinas web no ip range 
+ 192.168.5.12[0-7]. Esses ips estão adicionados no config do nginx da máquina.114
+
+    cd repo/scripts
+    perl deploy.pl nginx   192.168.5.114              # nginx + redis
+    perl deploy.pl web1    192.168.5.120              # app-voter1
+    perl deploy.pl web2    192.168.5.121              # app-voter2
+    perl deploy.pl web3    192.168.5.122              # app-voter3
+    ...
+
+ Feito  isso é só acessar os endpoints da máquina 192,168.5.114, ex:
+
+    http://192.168.5.114/contests  ou fazer benchmarks etc.
+
+ não é necessário subir todas as web1-web8 de uma vez.. pode subir web1 
+ primeiro e fazer um benchmark. depois subir a web2, agora são 2 maquinas, 
+ e fazer outro benchmark... depois subir mais uma e benchmark novamente.
+
+ 4. Ativar e acessar as máquinas
+
+    cd repo/scripts
+    cd web1       #aqui vai o nome da maquina criada no passo anterior
+    vagrant up    #este comando liga a maquina virtual
+    vagrant ssh   #este comando conecta e abre um ssh pra essa maquina
+
+
+
+                                TESTES
+
+A app está testada. Os testes ficam no diretório t dentro de Voter-DB e Voter-REST.
+Para executar os testes:
+
+
+    acesse a máquina web1 com "vagant ssh" e em seguida, cd perl/Voter-DB
+    #testa Voter::DB
+    cd Voter-DB
+    prove -l t
+    #testa Voter::REST
+    cd Voter-REST
+    ./prove.sh
+
+
+                                ARQUITETURA
+
+O overview da arquitetura é este:
+
+
+                        _____                _____ 
+    o      <---->       |   |    <---->      |   | 
+   -|-     <---->       |   |    <---->      |   | 
+   / \     <---->       |___|    <---->      |___|
+ o  o  o 
+-|--|--|-               nginx           192.168.5.120-127
+/ \/ \/ \               redis           web1,web2...web7
+   users            192.168.5.114
+
+
+ Legenda: Usuários acessam os servidores frontend, no caso 1 nginx + redis.
+ Em seguida o próprio nginx repassa os requests para as máquinas web que
+ rodam a aplicacão. O próprio nginx faz load balance dos requests.
+ Os server web1..7 processam os requests e atualizam os valores no redis.
+
+
+
+                              SCALANDO A APP
+
+ Para testar a escalabilidade, sugiro subir 1 nginx e 1 web ex:
+
+    cd repo/scripts
+    perl deploy.pl nginx   192.168.5.114              # nginx + redis
+    perl deploy.pl web1    192.168.5.120              # app-voter1
+
+ feito isso, tem um script chamado benchmark.pl que pode ser rodado com:
+
+    cd repo/scripts
+    perl benchmark.pl
+
+ esse script vai fazer alguns requests para o nginx e calcular quantos 
+ requests a app consegue responder por segundo. Feito isso, experimente
+ subir outra máquina web para aumentar as respostas/sec. Porém lembre-se
+ de alterar o arquivo do nginx e descomentar o ip da nova máquina e reiniciar
+ o nginx. 
+
+ subir outra máquina e depois desocomentar o ip desta nova maq no conf do nginx
+
+    cd repo/scripts
+    perl deploy.pl web2    192.168.5.121              # app-voter2
+
+ isso vai subir uma nova maquina web no ip 192.168.5.121. Agora é necessário
+ avisar o nginx que a máquina está de pé. Tem que acessar o ssh da máq nginx
+ e editar o arquivo /etc/nginx/nginx.conf e adicionar o ip la no upstream
+ 
+    cd repo/scripts
+    cd nginx
+    vagrant ssh
+    # Agora vc está dentro da maquina nginx
+    sudo vim /etc/nginx/nginx.conf
+ 
+ e procurar por "upstream" e adicionar/descomentar o ip da máquina web2.
+ depois só re-carregar o nginx
+
+    sudo systemctl reload nginx
+
